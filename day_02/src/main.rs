@@ -42,6 +42,13 @@ impl FromStr for CubeSet {
     }
 }
 
+impl CubeSet {
+    // The power of a set is the factor of its components
+    fn get_power(&self) -> u32 {
+        self.red * self.green * self.blue
+    }
+}
+
 #[derive(Debug, Default)]
 struct Game {
     id: u32,
@@ -81,43 +88,61 @@ impl Game {
             .all(|s| s.red <= set.red && s.green <= set.green && s.blue <= set.blue)
     }
 
-    fn find_all_viable(s: &str, set: &CubeSet) -> Result<Vec<Self>, ParseGameErr> {
-        let games = s
-            .lines()
-            .map(Game::from_str)
-            .collect::<Result<Vec<_>, _>>()?;
-
-        // .iter() creates an iterator over references, which cannot be collected into an owned vec
-        // Instead we need a consuming iterator that takes ownership of its values, we can do this with .into_iter()
-        let games = games
-            .into_iter()
-            .filter(|g| g.is_viable_with_set(set))
-            .collect();
-
-        Ok(games)
+    fn parse_all(s: &str) -> Result<Vec<Game>, ParseGameErr> {
+        s.lines().map(Game::from_str).collect()
     }
 
-    fn sum_ids(games: Vec<Game>) -> u32 {
+    fn find_viable_for_set<'a>(games: &'a Vec<Game>, set: &CubeSet) -> Vec<&'a Game> {
+        games
+            .into_iter()
+            .filter(|g| g.is_viable_with_set(set))
+            .collect()
+    }
+
+    fn sum_ids(games: &Vec<&Game>) -> u32 {
         games.iter().map(|g| g.id).sum()
+    }
+
+    // Find the minimum possible number of cubes for a game
+    fn find_min_set(&self) -> CubeSet {
+        let mut set = CubeSet::default();
+
+        self.sets.iter().for_each(|s| {
+            set.red = set.red.max(s.red);
+            set.green = set.green.max(s.green);
+            set.blue = set.blue.max(s.blue);
+        });
+
+        set
     }
 }
 
 fn main() -> Result<(), ParseGameErr> {
-    // Part 1
     const INPUT: &str = include_str!("./input.txt");
+    let games = Game::parse_all(INPUT)?;
 
-    let games = Game::find_all_viable(
-        INPUT,
+    // Part 1
+    let viable = Game::find_viable_for_set(
+        &games,
         &CubeSet {
             red: 12,
             green: 13,
             blue: 14,
         },
-    )?;
+    );
 
-    let sum = Game::sum_ids(games);
+    let sum = Game::sum_ids(&viable);
 
     println!("Part 1: Sum of viable IDs: {sum}");
+
+    // Part 2
+    let power_sum: u32 = games
+        .iter()
+        .map(|g| g.find_min_set())
+        .map(|s| s.get_power())
+        .sum();
+
+    println!("Part 2: Sum of min set power: {power_sum}");
 
     Ok(())
 }
