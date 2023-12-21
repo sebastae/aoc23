@@ -27,22 +27,23 @@ impl Number {
         }
     }
 
-    fn get_adjacent_locations(self) -> Vec<Location> {
-        let len = (self.number as f32).log10() as u32;
-        let range = (self.location.index as u32 - 1)..=(self.location.index as u32 + len + 1);
-        let mut ln_over: Vec<(u32, u32)> =
-            range.map(|i| (self.location.line as u32 - 1, i)).collect();
+    fn get_adjacent_locations(&self) -> Vec<Location> {
+        let len = (self.number as f32).log10() as i32;
+        let range = (self.location.index as i32 - 1)..=(self.location.index as i32 + len + 1);
+        let ln_over: Vec<(i32, i32)> = range
+            .clone()
+            .map(|i| (self.location.line as i32 - 1, i))
+            .collect();
 
-        let mut ln_same = vec![
-            (self.location.line as u32, self.location.index as u32 - 1),
+        let ln_same = vec![
+            (self.location.line as i32, self.location.index as i32 - 1),
             (
-                self.location.line as u32,
-                self.location.index as u32 + len + 1,
+                self.location.line as i32,
+                self.location.index as i32 + len + 1,
             ),
         ];
 
-        let mut ln_next: Vec<(u32, u32)> =
-            range.map(|i| (self.location.line as u32 + 1, i)).collect();
+        let ln_next: Vec<(i32, i32)> = range.map(|i| (self.location.line as i32 + 1, i)).collect();
 
         vec![ln_over, ln_same, ln_next]
             .iter()
@@ -107,13 +108,27 @@ impl FromStr for Schematic {
 
 impl Schematic {
     fn find_part_numbers(self) -> Vec<u32> {
-        
-
+        self.numbers
+            .iter()
+            .filter(|n| {
+                n.get_adjacent_locations()
+                    .iter()
+                    .any(|l| self.symbols.contains_key(l))
+            })
+            .map(|n| n.number)
+            .collect()
     }
 }
 
+fn part_1(input: &str) -> Result<u32, ParseSchematicError> {
+    let schm = Schematic::from_str(input)?;
+
+    Ok(schm.find_part_numbers().iter().sum())
+}
+
 fn main() {
-    println!("Hello, world!");
+    const INPUT: &str = include_str!("./input.txt");
+    println!("Part 1: {}", part_1(INPUT).unwrap())
 }
 
 #[cfg(test)]
@@ -170,5 +185,12 @@ mod test {
         };
 
         assert_eq!(schm, expect);
+    }
+
+    #[test]
+    fn it_solves_part_1() {
+        const INPUT: &str = "467..114..\n...*......\n..35..633.\n......#...\n617*......\n.....+.58.\n..592.....\n......755.\n...$.*....\n.664.598..";
+
+        assert_eq!(part_1(INPUT).unwrap(), 4361);
     }
 }
