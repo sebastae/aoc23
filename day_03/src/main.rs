@@ -118,6 +118,26 @@ impl Schematic {
             .map(|n| n.number)
             .collect()
     }
+
+    fn find_gear_ratios(self) -> Vec<u32> {
+        self.symbols
+            .iter()
+            .filter(|(_, sym)| &sym[..] == "*")
+            .filter_map(|(loc, _)| {
+                let numbers = self
+                    .numbers
+                    .iter()
+                    .filter(|n| n.get_adjacent_locations().iter().any(|l| l == loc))
+                    .collect::<Vec<&Number>>();
+
+                if numbers.len() == 2 {
+                    return Some(numbers.get(0).unwrap().number * numbers.get(1).unwrap().number);
+                }
+
+                return None;
+            })
+            .collect()
+    }
 }
 
 fn part_1(input: &str) -> Result<u32, ParseSchematicError> {
@@ -126,9 +146,16 @@ fn part_1(input: &str) -> Result<u32, ParseSchematicError> {
     Ok(schm.find_part_numbers().iter().sum())
 }
 
+fn part_2(input: &str) -> Result<u32, ParseSchematicError> {
+    let schm = Schematic::from_str(input)?;
+
+    Ok(schm.find_gear_ratios().iter().sum())
+}
+
 fn main() {
     const INPUT: &str = include_str!("./input.txt");
-    println!("Part 1: {}", part_1(INPUT).unwrap())
+    println!("Part 1: {}", part_1(INPUT).unwrap());
+    println!("Part 2: {}", part_2(INPUT).unwrap());
 }
 
 #[cfg(test)]
@@ -187,10 +214,15 @@ mod test {
         assert_eq!(schm, expect);
     }
 
+    const INPUT: &str = "467..114..\n...*......\n..35..633.\n......#...\n617*......\n.....+.58.\n..592.....\n......755.\n...$.*....\n.664.598..";
+
     #[test]
     fn it_solves_part_1() {
-        const INPUT: &str = "467..114..\n...*......\n..35..633.\n......#...\n617*......\n.....+.58.\n..592.....\n......755.\n...$.*....\n.664.598..";
-
         assert_eq!(part_1(INPUT).unwrap(), 4361);
+    }
+
+    #[test]
+    fn it_solves_part_2() {
+        assert_eq!(part_2(INPUT).unwrap(), 467835);
     }
 }
