@@ -1,4 +1,4 @@
-use std::{collections::HashSet, str::FromStr};
+use std::{collections::{HashSet, HashMap}, str::FromStr};
 
 type AocError = String;
 
@@ -68,9 +68,9 @@ impl FromStr for Card {
 impl Card {
     fn get_matching_numbers(self: &Self) -> Vec<u32> {
         let mut winning_numbers: HashSet<u32> = HashSet::new();
-        self.winning_numbers
-            .iter()
-            .for_each(|n| {winning_numbers.insert(n.number);});
+        self.winning_numbers.iter().for_each(|n| {
+            winning_numbers.insert(n.number);
+        });
 
         self.card_numbers
             .iter()
@@ -94,6 +94,27 @@ impl Card {
     }
 }
 
+fn calculate_won_cards(cards: Vec<Card>) -> u32 {
+
+    let mut num_cards: HashMap<u32, u32> = HashMap::from_iter(cards.iter().map(|c| (c.number, 1)));
+
+    for card in cards {
+        let num_cards_won = card.get_matching_numbers().len() as u32;
+        let won_cards = (card.number + 1)..(card.number + 1 + num_cards_won);
+
+        let num_current_card = {num_cards.get(&card.number).unwrap_or(&1).clone()};
+
+        for crd in won_cards {
+            let current_num = {num_cards.get(&crd).unwrap_or(&1)};
+            num_cards.insert(crd, *current_num + num_current_card);
+        }
+
+    }
+
+
+    num_cards.values().sum()
+}
+
 fn main() {
     const INPUT: &str = include_str!("./input.txt");
     let cards = INPUT
@@ -106,6 +127,8 @@ fn main() {
         "Part 1: {}",
         cards.iter().map(Card::get_points).sum::<u32>()
     );
+
+    println!("Part 2: {}", calculate_won_cards(cards));
 }
 
 #[cfg(test)]
@@ -191,5 +214,16 @@ mod test {
             .collect::<Result<Vec<Card>, AocError>>()
             .unwrap();
         assert_eq!(cards.iter().map(Card::get_points).sum::<u32>(), 13);
+    }
+
+    #[test]
+    fn it_passes_part_2_example() {
+        let cards = EXAMPLE_INPUT
+            .lines()
+            .map(Card::from_str)
+            .collect::<Result<Vec<Card>, AocError>>()
+            .unwrap();
+
+        assert_eq!(calculate_won_cards(cards), 30);
     }
 }
